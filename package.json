@@ -1,0 +1,35 @@
+{
+  "name": "crsa",
+  "version": "1.0.1",
+  "description": "A tool allowing usage of container-relative units similar to those relative to the viewport",
+  "main": "./umd/crsa.js",
+  "scripts": {
+    "test": "node test.js",
+    "build": "grunt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wwtchrsin/CRSA.git"
+  },
+  "keywords": [
+    "css",
+    "container-relative",
+    "styles",
+    "units",
+    "vmin",
+    "vmax"
+  ],
+  "author": "Vladislav Chursin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wwtchrsin/CRSA/issues"
+  },
+  "homepage": "https://github.com/wwtchrsin/CRSA#readme",
+  "devDependencies": {
+    "grunt": "^1.3.0",
+    "grunt-contrib-concat": "^1.0.1",
+    "grunt-contrib-jshint": "^3.0.0",
+    "grunt-contrib-uglify": "^5.0.1",
+    "live-server": "^1.2.1"
+  }
+}

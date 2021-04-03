@@ -1,6 +1,16 @@
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        define([], factory);
+    } else if (typeof module === 'object' && module.exports) {
+        module.exports = factory();
+    } else {
+        root.CRSA = factory();
+    }
+})(this, function() {
+'use strict';
 var CRSA = function(container) {
     'use strict';
-    var self = this;
+	var self = this;
     var styles = {};
     var dimensionsDefined = false;
     var stylesDefined = false;
@@ -42,8 +52,8 @@ var CRSA = function(container) {
         var width = newDimensions.right - newDimensions.left;
         var height = newDimensions.bottom - newDimensions.top;
         if ( !width || !height ) return;
-        if ( width !== dimensions.cw || height !== dimensions.ch || !stylesApplied )
-            self.defineDimensions(width, height);
+        ( width !== dimensions.cw || height !== dimensions.ch || !stylesApplied )
+            && self.defineDimensions(width, height);
     };
     var onResize = function() {
         if ( resizeInterval < 0 ) {
@@ -109,7 +119,7 @@ var CRSA = function(container) {
                 styles[selector][attr] = {
                     value: object[selector][attr],
                     defval: undefined,
-                };
+                }
             }
         }
         stylesDefined = true;
@@ -121,7 +131,9 @@ var CRSA = function(container) {
         if ( container ) restoreDefaultStyles(container);
         if ( typeof element === "string" )
             element = document.querySelector(element);
-        container = ( element instanceof HTMLElement ) ? element : null;
+        container = ( element instanceof HTMLElement )
+            ? element
+            : null;
         stylesApplied = false;
         dimensionsDefined = false;
         if ( container ) saveDefaultStyles(container);
@@ -165,3 +177,5 @@ var CRSA = function(container) {
     };
     (function() { self.defineContainer(container); })();
 };
+return CRSA;
+});
