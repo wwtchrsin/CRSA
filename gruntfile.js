@@ -28,20 +28,16 @@ module.exports = function(grunt) {
           banner: umdContent[0],
           footer: umdContent[1],
         },
-        dist: {
-            src: ["./scr/"+pkg.name+".js"], 
-            dest: "./umd/"+pkg.name+".js",
-        },
+        src: ["./src/"+pkg.name+".js"], 
+        dest: "./umd/"+pkg.name+".js",
       },
       esm: {
         options: {
           banner: esmContent[0],
           footer: esmContent[1],
         },
-        dist: {
-          src: ["./src/"+pkg.name+".js"],
-          dest: "./esm/"+pkg.name+".js",
-        },
+        src: ["./src/"+pkg.name+".js"],
+        dest: "./esm/"+pkg.name+".js",
       },
     },
     uglify: {

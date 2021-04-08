@@ -1,7 +1,8 @@
 var CRSA = function(container) {
     'use strict';
-	var self = this;
+    var self = this;
     var styles = {};
+    var rollback = {};
     var dimensionsDefined = false;
     var stylesDefined = false;
     var stylesApplied = false;
@@ -42,8 +43,8 @@ var CRSA = function(container) {
         var width = newDimensions.right - newDimensions.left;
         var height = newDimensions.bottom - newDimensions.top;
         if ( !width || !height ) return;
-        ( width !== dimensions.cw || height !== dimensions.ch || !stylesApplied )
-            && self.defineDimensions(width, height);
+        if ( width !== dimensions.cw || height !== dimensions.ch || !stylesApplied )
+            self.defineDimensions(width, height);
     };
     var onResize = function() {
         if ( resizeInterval < 0 ) {
@@ -58,76 +59,66 @@ var CRSA = function(container) {
         if ( delta >= resizeInterval ) autoRefresh();
         lastResize = timestamp;
     };
-    var restoreDefaultStyles = function(container) {
-        if ( !container ) return;
-        for ( var selector in styles ) {
-            var element = container.querySelector(selector);
-            if ( !element ) element = document.querySelector(selector);
-            if ( !element ) continue;
-            element = element.style;
-            for ( var attr in styles[selector] ) {
-                var defaultValue = styles[selector][attr].defval;
-                element[attr] = defaultValue;
+    var rollbackStyles = function() {
+        for ( var selector in rollback ) for ( var attr in rollback[selector] )
+            for ( var i=0; i < rollback[selector][attr].elements.length; i++ ) {
+                var element = rollback[selector][attr].elements[i];
+                var value = rollback[selector][attr].values[i];
+                if ( element ) element.style[attr] = value;
             }
-        }
-    };
-    var saveDefaultStyles = function(container) {
-        if ( !container ) return;
-        for ( var selector in styles ) {
-            var element = container.querySelector(selector);
-            if ( !element ) element = document.querySelector(selector);
-            if ( !element ) continue;
-            element = element.style;
-            for ( var attr in styles[selector] ) {
-                var defaultValue = element[attr];
-                styles[selector][attr].defval = defaultValue;
-            }
-        }
     };
     var refresh = function() {
         if ( !container ) return;
+        rollbackStyles();
         for ( var selector in styles ) {
-            var element = container.querySelector(selector);
-            if ( !element ) element = document.querySelector(selector);
-            if ( !element ) continue;
-            element = element.style;
+            var elements = container.querySelectorAll(selector);
+            if ( !elements.length ) elements = document.querySelectorAll(selector);
             for ( var attr in styles[selector] ) {
-                var abstractValue = styles[selector][attr].value;
-                var value = abstractValue.replace(pattern, transformer);
-                element[attr] = value;
+                if ( elements.length ) {
+                    var abstractValue = styles[selector][attr];
+                    var value = abstractValue.replace(pattern, transformer);
+                    for ( var i=0; i < elements.length; i++ ) {
+                        var elementStyles = elements[i].style;
+                        rollback[selector][attr].elements[i] = elements[i];
+                        rollback[selector][attr].values[i] = elementStyles[attr];
+                        elementStyles[attr] = value;
+                    }
+                }
+                var targetSize = elements.length;
+                var sizeDelta = rollback[selector][attr].elements.length - targetSize;
+                if ( sizeDelta > 0 ) {
+                    rollback[selector][attr].elements.splice(targetSize, sizeDelta);
+                    rollback[selector][attr].values.splice(targetSize, sizeDelta);
+                }
             }
         }
         stylesApplied = true;
     };
     this.defineStyles = function(object) {
         if ( !(object && typeof object === "object") ) return;
-        if ( container ) restoreDefaultStyles(container);
+        if ( stylesDefined ) rollbackStyles();
         styles = {};
+        rollback = {};
         for ( var selector in object ) {
             styles[selector] = {};
+            rollback[selector] = {};
             for ( var attr in object[selector] ) {
-                styles[selector][attr] = {
-                    value: object[selector][attr],
-                    defval: undefined,
-                }
+                rollback[selector][attr] = { elements: [], values: [] };
+                styles[selector][attr] = object[selector][attr];
             }
         }
         stylesDefined = true;
-        if ( container ) saveDefaultStyles(container);
         if ( dimensionsDefined ) refresh();
         return self;
     };
     this.defineContainer = function(element) {
-        if ( container ) restoreDefaultStyles(container);
         if ( typeof element === "string" )
             element = document.querySelector(element);
-        container = ( element instanceof HTMLElement )
-            ? element
-            : null;
+        container = ( element instanceof HTMLElement ) ? element : null;
         stylesApplied = false;
         dimensionsDefined = false;
-        if ( container ) saveDefaultStyles(container);
-        if ( stylesDefined ) refresh();
+        if ( stylesDefined && container ) refresh();
+        if ( stylesDefined && !container ) rollbackStyles();
         return self;
     };
     this.defineDimensions = function(width, height) {

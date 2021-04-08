@@ -1,6 +1,6 @@
 {
   "name": "crsa",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A tool allowing usage of container-relative units similar to those relative to the viewport",
   "main": "./umd/crsa.js",
   "scripts": {
