@@ -72,6 +72,15 @@ min-height: 120px;
 border-radius: 5px;
 text-align: center;
 }
+#container-b .text:nth-child(1) {
+color: rgb(95%,95%,95%);
+}
+#container-b .text:nth-child(2) {
+color: rgb(90%,85%,0%);
+}
+#container-b .text:nth-child(3) {
+color: rgb(0%,55%,60%);
+}
 #description {
 background-color: rgb(80%,75%,0%);
 color: rgb(99%,99%,99%);
@@ -110,12 +119,6 @@ text-align: center;
                 <span class="text">
                     TEXT TEXT TEXT TEXT TEXT TEXT
                     TEXT TEXT TEXT TEXT TEXT TEXT
-                    TEXT TEXT TEXT TEXT TEXT TEXT
-                    TEXT TEXT TEXT TEXT TEXT TEXT
-                    TEXT TEXT TEXT TEXT TEXT TEXT
-                    TEXT TEXT TEXT TEXT TEXT TEXT
-                    TEXT TEXT TEXT TEXT TEXT TEXT
-                    TEXT TEXT
                 </span>
             </div>
         </div>
@@ -125,10 +128,33 @@ text-align: center;
     <script type="text/javascript" src="../crsa.js"></script>
     <script type="text/javascript">
         window.addEventListener("DOMContentLoaded", function(ev) {
+            var byId = "getElementById";
+            var byClass = "getElementsByClassName";
             var elems = { 
                 page: document.getElementById("page"),
                 body: document.body,
+                cbContent: document[byId]("container-b")[byClass]("content")[0],
+                cbText: [
+                    document[byId]("container-b")[byClass]("text")[0],
+                    document.createElement("span"),
+                    document.createElement("span"),
+                ],
             };
+            elems.cbText[1].classList.add("text");
+            elems.cbText[2].classList.add("text");
+            var cbTextPointer = 1;
+            var modifyContainer = function() {
+                if ( cbTextPointer > 2 ) {
+                    for ( var i=0; i < cbTextPointer; i++ )
+                        elems.cbContent.removeChild(elems.cbText[i]);
+                    cbTextPointer = 0;
+                }
+                var repeats = Math.floor(Math.random() * 10 + 7);
+                elems.cbText[cbTextPointer].textContent = "TEXT ".repeat(repeats);
+                elems.cbContent.appendChild(elems.cbText[cbTextPointer++]);
+                tid = setTimeout(modifyContainer, cbTextPointer * cbTextPointer * 800);
+            };
+            var tid = setTimeout(modifyContainer, 800);
             var onMouseMove = function(ev) {
                 var width = Math.abs(ev.clientX - 0.5 * innerWidth) / innerWidth * 200;
                 var height = Math.abs(ev.clientY - 0.5 * innerHeight) / innerHeight * 200;
@@ -158,12 +184,12 @@ text-align: center;
                     isResizing = false;
                 }
             });
-            (new CRSA("#container-a .content"))
+            window.crsaA = (new CRSA("#container-a .content"))
                 .defineStyles({".text": { "font-size": "6cavg" }})
-                .enableAutoRefresh();
+                .enableAutoRefresh(1000, 1000, 5000);
             window.crsaB = (new CRSA("#container-b .content"))
                 .defineStyles({".text": { "font-size": "6cavg" }})
-                .enableAutoRefresh(-1, -1);
+                .enableAutoRefresh(-1, -1, -1);
         });
     </script>
 </body>

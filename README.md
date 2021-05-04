@@ -32,21 +32,25 @@ e.g. be fixed or relative to an ancestor container
             "padding": "10cmin",
             "font-size": "5cmin",
         },
-    })
-    .enableAutoRefresh();
+    });
 ```
 
 ## Description
 * **constructor** accepts either a CSS selector string or an instance of HTMLElement
-* **defineStyles()** accept an object where property names represent CSS selectors of
-HTML elements to apply styles to and property values contain style rules to be applied.
+* **defineStyles()** accept an object where the names of the object's items represent CSS selectors of
+HTML elements to apply styles to and the values of the items contain style rules to be applied.
 First, the element is being searched within the container and if not found, in the whole document
 and if not found again, the styles won't be applied. Auxiliary units **ch**, **cw**, **cmin**,
 **cmax**, or **cavg** will be converted to pixels.
-* **enableAutoRefresh()** defines intervals of reassessing container's dimensions.
-The values are specified in milliseconds. The first argument defines the refresh interval
-applied when the browser window is being resized, and the second argument defines the interval
-used in any other cases. If a number equal to zero or lesser is passed the reassessment
-will take place at every frame refresh. The default values of the first and second arguments 
-are **-1** and **250** respectively. Auto refresh can be disabled by calling **disableAutoRefresh()**.
-It is also possible to manually report the new dimensions by calling **refresh(width, height)**.
+* **enableAutoRefresh()** defines intervals related to representation refreshment.
+The values are specified in milliseconds.  The first argument defines the interval
+of reassessing container's dimensions being applied when the browser window is being resized,
+the second argument defines the interval of reassessment applicable in any other cases,
+and in both cases, the actual refreshment happens only if the container's dimensions have changed.
+The third argument defines the interval of unconditional refreshment practical when the container's
+content is meant to be changing. If some argument is assigned a number equal to or lesser than zero,
+the interval is being bound to the frame rate of the browser window i.e. equal to the time span
+between frames. The default values of the first, second and third arguments
+are **-1**, **250** and **1e+12** respectively. Auto-refresh can be disabled by calling
+**disableAutoRefresh()**. It is also possible to manually refresh the representation
+by calling **refresh()**.

@@ -17,11 +17,15 @@ var CRSA = function(container) {
     var transformer = function(match, value, type) {
         return Math.floor(0.01 * +value * dimensions[type]) + "px";
     };
-    var refreshInterval = 250;
-    var resizeInterval = -1;
-    var lastResize = -refreshInterval;
-    var autoRefreshTID = null;
-    var autoRefreshRAFID = null;
+    var autoRefreshDisabled = false;
+    var uncondRI = 1e+12;
+    var autoRI = 250;
+    var resizeRI = -1;
+    var lastRefresh = -autoRI;
+    var autoRTID = null;
+    var autoRRAFID = null;
+    var uncondRTID = null;
+    var uncondRRAFID = null;
     var requestAnimationFrame = window.requestAnimationFrame;
     var cancelAnimationFrame = window.cancelAnimationFrame;
     if ( !requestAnimationFrame || !cancelAnimationFrame ) {
@@ -32,32 +36,51 @@ var CRSA = function(container) {
             clearTimeout(tid);
         };
     }
-    var autoRefresh = function() {
-        if ( refreshInterval > 0 ) autoRefreshRAFID = null;
-        else autoRefreshRAFID = requestAnimationFrame(autoRefresh);
-        if ( refreshInterval > 0 && autoRefreshTID === null )
-            autoRefreshTID = setInterval(autoRefresh, refreshInterval);
+    var uncondRefresh, autoRefresh;
+    var clearTimeouts = function(refreshType) {
+        if ( refreshType === "u" || !refreshType ) {
+            if ( uncondRRAFID !== null ) cancelAnimationFrame(uncondRRAFID);
+            if ( uncondRTID !== null ) clearInterval(uncondRTID);
+            uncondRRAFID = null; 
+            uncondRTID = null;
+        }
+        if ( refreshType === "a" || !refreshType ) {
+            if ( autoRRAFID !== null ) cancelAnimationFrame(autoRRAFID);
+            if ( autoRTID !== null ) clearInterval(autoRTID);
+            autoRRAFID = null; 
+            autoRTID = null;
+        }
+    };
+    var setTimeouts = function(refreshType) {
+        if ( autoRefreshDisabled ) return;
+        clearTimeouts(refreshType);
+        if ( refreshType === "u" || !refreshType ) {
+            if ( uncondRI > 0 && uncondRI < 1e+12 ) uncondRTID = setTimeout(uncondRefresh, uncondRI);
+            if ( uncondRI <= 0 ) uncondRRAFID = requestAnimationFrame(uncondRefresh);
+        }
+        if ( (refreshType === "a" || !refreshType) && (uncondRI > 0 && autoRI < uncondRI) ) {
+            if ( autoRI > 0 ) autoRTID = setTimeout(autoRefresh, autoRI);
+            else autoRRAFID = requestAnimationFrame(autoRefresh);
+        }
+    };
+    var autoRefreshGeneral = function(refreshType) {
+        setTimeouts(refreshType);
         if ( !container || !container.getBoundingClientRect ) return;
         var newDimensions = container.getBoundingClientRect();
         if ( !newDimensions ) return;
         var width = newDimensions.right - newDimensions.left;
         var height = newDimensions.bottom - newDimensions.top;
         if ( !width || !height ) return;
-        if ( width !== dimensions.cw || height !== dimensions.ch || !stylesApplied )
-            self.defineDimensions(width, height);
+        var redefine = width !== dimensions.cw || height !== dimensions.ch;
+        redefine = redefine || !stylesApplied || (refreshType === "u");
+        if ( redefine ) self.defineDimensions(width, height);
     };
     var onResize = function() {
-        if ( resizeInterval < 0 ) {
-            if ( autoRefreshRAFID !== null ) return;
-            if ( autoRefreshTID !== null ) clearInterval(autoRefreshTID);
-            autoRefreshRAFID = requestAnimationFrame(autoRefresh);
-            autoRefreshTID = null;
-            return;
+        if ( container && stylesDefined ) {
+            var timestamp = performance.now();
+            var delta = timestamp - lastRefresh;
+            if ( delta >= resizeRI ) autoRefresh();
         }
-        var timestamp = performance.now();
-        var delta = timestamp - lastResize;
-        if ( delta >= resizeInterval ) autoRefresh();
-        lastResize = timestamp;
     };
     var rollbackStyles = function() {
         for ( var selector in rollback ) for ( var attr in rollback[selector] )
@@ -69,6 +92,7 @@ var CRSA = function(container) {
     };
     var refresh = function() {
         if ( !container ) return;
+        setTimeouts();
         rollbackStyles();
         for ( var selector in styles ) {
             var elements = container.querySelectorAll(selector);
@@ -93,8 +117,9 @@ var CRSA = function(container) {
             }
         }
         stylesApplied = true;
+        lastRefresh = performance.now();
     };
-    this.defineStyles = function(object) {
+    self.defineStyles = function(object) {
         if ( !(object && typeof object === "object") ) return;
         if ( stylesDefined ) rollbackStyles();
         styles = {};
@@ -108,20 +133,21 @@ var CRSA = function(container) {
             }
         }
         stylesDefined = true;
-        if ( dimensionsDefined ) refresh();
+        if ( dimensionsDefined && container ) refresh();
+        if ( !dimensionsDefined && container ) self.refresh();
         return self;
     };
-    this.defineContainer = function(element) {
+    self.defineContainer = function(element) {
         if ( typeof element === "string" )
             element = document.querySelector(element);
         container = ( element instanceof HTMLElement ) ? element : null;
         stylesApplied = false;
         dimensionsDefined = false;
-        if ( stylesDefined && container ) refresh();
+        if ( stylesDefined && container ) self.refresh();
         if ( stylesDefined && !container ) rollbackStyles();
         return self;
     };
-    this.defineDimensions = function(width, height) {
+    self.defineDimensions = function(width, height) {
         dimensionsDefined = true;
         dimensions.cw = width;
         dimensions.ch = height;
@@ -131,31 +157,37 @@ var CRSA = function(container) {
         refresh();
         return self;
     };
-    this.enableAutoRefresh = function() {
-        if ( arguments.length > 0 ) resizeInterval = arguments[0];
-        if ( arguments.length > 1 ) refreshInterval = arguments[1];
-        if ( autoRefreshTID !== null ) clearInterval(autoRefreshTID);
-        if ( autoRefreshRAFID !== null ) cancelAnimationFrame(autoRefreshRAFID);
-        autoRefreshTID = null;
-        autoRefreshRAFID = null;
-        if ( refreshInterval <= 0 ) {
-            autoRefreshRAFID = requestAnimationFrame(autoRefresh);
-            window.removeEventListener("resize", onResize);
-        } else {
-            autoRefreshTID = setInterval(autoRefresh, refreshInterval);
-            window.addEventListener("resize", onResize);
-            autoRefresh();
-        }
+    self.enableAutoRefresh = function() {
+        if ( arguments.length > 0 ) resizeRI = arguments[0];
+        if ( arguments.length > 1 ) autoRI = arguments[1];
+        if ( arguments.length > 2 ) uncondRI = arguments[2];
+        autoRefreshDisabled = false;
+        uncondRefresh();
+        if ( autoRI < 0 || uncondRI < 0 ) window.removeEventListener("resize", onResize);
+        else window.addEventListener("resize", onResize);
         return self;
     };
-    this.disableAutoRefresh = function() {
-        if ( autoRefreshTID !== null ) clearInterval(autoRefreshTID);
-        if ( autoRefreshRAFID !== null ) cancelAnimationFrame(autoRefreshRAFID);
-        autoRefreshTID = null;
-        autoRefreshRAFID = null;
+    self.disableAutoRefresh = function() {
+        clearTimeouts();
         window.removeEventListener("resize", onResize);
+        autoRefreshDisabled = true;
         return self;
     };
-    (function() { self.defineContainer(container); })();
+    self.refresh = function() {
+        if ( !container || !container.getBoundingClientRect ) return self;
+        if ( !stylesDefined ) return self;
+        var newDimensions = container.getBoundingClientRect();
+        if ( !newDimensions ) return self;
+        var width = newDimensions.right - newDimensions.left;
+        var height = newDimensions.bottom - newDimensions.top;
+        self.defineDimensions(width, height);
+        return self;
+    };
+    (function() {
+        autoRefresh = autoRefreshGeneral.bind(null, "a");
+        uncondRefresh = autoRefreshGeneral.bind(null, "u");
+        self.defineContainer(container);
+        window.addEventListener("resize", onResize);
+    })();
 };
 export default CRSA;
